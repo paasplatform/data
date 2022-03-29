@@ -43,6 +43,42 @@ async function getConnectionSchema(req, res) {
   return res.utils.data(schemaInfo);
 }
 
+/**
+ * @param {Req} req
+ * @param {Res} res
+ */
+async function getConnectionDatabases(req, res) {
+  const { models, user } = req;
+  const { connectionId } = req.params;
+
+  const conn = await models.connections.findOneById(connectionId);
+
+  if (!conn) {
+    return res.utils.notFound();
+  }
+
+  const connectionClient = new ConnectionClient(conn, user);
+  let result;
+  try {
+    const database = await connectionClient.getDatabase();
+    result = database.rows;
+    // eslint-disable-next-line guard-for-in
+    for (let index in result) {
+      // eslint-disable-next-line no-await-in-loop
+      const data = await connectionClient.getSchema({
+        database: result[index].name,
+      });
+      result[index].schemas = [...(data.schemas || [])];
+    }
+  } catch (error) {
+    // Assumption is that error is due to user configuration
+    // letting it bubble up results in 500, but it should be 400
+    return res.utils.error(error);
+  }
+
+  return res.utils.data(result);
+}
+
 // compression is added here becasue a big database server can have huge amount
 // of metadata and since this is not retrieved schema by schema 20mb+ would easily be possible in plain/text
 // on slow connections where a LB does not compress this can be a big bottleneck.
@@ -51,6 +87,13 @@ router.get(
   compression(),
   mustHaveConnectionAccess,
   wrap(getConnectionSchema)
+);
+
+router.get(
+  '/api/connections/:connectionId/databases',
+  compression(),
+  mustHaveConnectionAccess,
+  wrap(getConnectionDatabases)
 );
 
 module.exports = router;
