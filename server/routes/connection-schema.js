@@ -50,33 +50,30 @@ async function getConnectionSchema(req, res) {
 async function getConnectionDatabases(req, res) {
   const { models, user } = req;
   const { connectionId } = req.params;
-
   const conn = await models.connections.findOneById(connectionId);
-
   if (!conn) {
     return res.utils.notFound();
   }
 
   const connectionClient = new ConnectionClient(conn, user);
-  let result;
   try {
     const database = await connectionClient.getDatabase();
-    result = database.rows;
-    // eslint-disable-next-line guard-for-in
-    for (let index in result) {
-      // eslint-disable-next-line no-await-in-loop
-      const data = await connectionClient.getSchema({
-        database: result[index].name,
-      });
-      result[index].schemas = [...(data.schemas || [])];
-    }
+    const actions = [];
+    const result = database.rows;
+    database.rows.forEach((item) => {
+      actions.push(connectionClient.getSchema({ database: item.name }));
+    });
+    const taskResults = await Promise.all(actions);
+    taskResults.forEach((taskResult, index) => {
+      result[index].schemas = [...(taskResult.schemas || [])];
+    });
+
+    return res.utils.data(result);
   } catch (error) {
     // Assumption is that error is due to user configuration
     // letting it bubble up results in 500, but it should be 400
     return res.utils.error(error);
   }
-
-  return res.utils.data(result);
 }
 
 // compression is added here becasue a big database server can have huge amount
