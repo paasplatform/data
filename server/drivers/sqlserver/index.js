@@ -1,5 +1,6 @@
 const mssql = require('mssql');
 const { formatSchemaQueryResults } = require('../utils');
+const { resolvePositiveNumber } = require('../../lib/resolve-number');
 
 const id = 'sqlserver';
 const name = 'SQL Server';
@@ -72,6 +73,12 @@ function runQuery(query, connection) {
         return reject(err);
       }
 
+      // Check to see if a custom maxrows is set, otherwise use default
+      const maxRows = resolvePositiveNumber(
+        connection.maxrows_override,
+        connection.maxRows
+      );
+
       const request = new mssql.Request(pool);
       // Stream set a config level doesn't seem to work
       request.stream = true;
@@ -85,7 +92,7 @@ function runQuery(query, connection) {
           }
           delete row[''];
         }
-        if (rows.length < connection.maxRows) {
+        if (rows.length < maxRows) {
           return rows.push(row);
         }
         // If reached it means we received a row event for more than maxRows
@@ -193,6 +200,12 @@ const fields = [
     key: 'readOnlyIntent',
     formType: 'CHECKBOX',
     label: 'ReadOnly Application Intent',
+  },
+  {
+    key: 'maxrows_override',
+    formType: 'TEXT',
+    label: 'Maximum rows to return',
+    description: 'Optional',
   },
 ];
 
