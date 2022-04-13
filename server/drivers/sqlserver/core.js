@@ -22,14 +22,6 @@ const SCHEMA_SQL = `
     c.ordinal_position
 `;
 
-const DATABASE_SQL = `  
-  DECLARE @AllTables table (db_name varchar(255), db_size int, remarks text) 
-  INSERT @AllTables 
-  EXEC sp_databases
-  SELECT a.db_size as size, d.name ,d.database_id,d.create_date  as id FROM @AllTables a  INNER JOIN sys.databases d ON a.db_name = d.name 
-  WHERE db_name NOT IN ('master', 'model', 'tempdb', 'msdb')
-`;
-
 /**
  * Run query for connection
  * Should return { rows, incomplete }
@@ -145,16 +137,6 @@ function getSchema(connection) {
   );
 }
 
-/**
- * Get databases for connection
- * @param {*} connection
- */
-function getDatabase(connection) {
-  return runQuery(DATABASE_SQL, connection).then((queryResult) => {
-    return queryResult;
-  });
-}
-
 const fields = [
   {
     key: 'host',
@@ -214,7 +196,6 @@ module.exports = {
   name,
   fields,
   getSchema,
-  getDatabase,
   runQuery,
   testConnection,
 };

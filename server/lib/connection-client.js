@@ -436,6 +436,11 @@ class ConnectionClient {
     return this.driver.getSchema(connectionMaxed);
   }
 
+  /**
+   * Gets all databases for connecton
+   * This data is used by ide to serve database list
+   * @returns {Promise}
+   */
   getDatabase() {
     // Increase the max rows without modifiying original connection
     const connectionMaxed = {
@@ -445,6 +450,22 @@ class ConnectionClient {
       maxRows: 1000000,
     };
     return this.driver.getDatabase(connectionMaxed);
+  }
+
+  /**
+   * Gets schemas, indexes and contraints for connection
+   * @returns {Promise}
+   */
+   getABC(config = {}) {
+    // Increase the max rows without modifiying original connection
+    const connectionMaxed = {
+      ...this.connection,
+      // 1 million rows ought to be enough for pulling schema.
+      // Schema probably needs to be broken up into getting tables (and their schemas), and then batching column reads
+      maxRows: 1000000,
+      ...config
+    };
+    return this.driver.getABC(connectionMaxed);
   }
 
   /**
