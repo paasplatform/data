@@ -52,10 +52,18 @@ function formatSchemaQueryResults(queryResult) {
   let hasSchema = false;
   const schemasById = {};
   const tablesById = {};
-  const indexRows = queryResult.rows.filter((r) => r.__RESULT__TYPE === 'INFORMATION_INDEXES');
-  const constraintRows = queryResult.rows.filter((r) => r.__RESULT__TYPE === 'INFORMATION_CONSTRAINTS');
-  const referentialConstraintRows = queryResult.rows.filter((r) => r.__RESULT__TYPE === 'INFORMATION_REFERENTIAL_CONSTRAINTS');
-  const schemaRows = queryResult.rows.filter((r) => r.__RESULT__TYPE === 'INFORMATION_SCHEMA');
+  const indexRows = queryResult.rows.filter(
+    (r) => r.__result__type === 'INFORMATION_INDEXES'
+  );
+  const constraintRows = queryResult.rows.filter(
+    (r) => r.__result__type === 'INFORMATION_CONSTRAINTS'
+  );
+  const referentialConstraintRows = queryResult.rows.filter(
+    (r) => r.__result__type === 'INFORMATION_REFERENTIAL_CONSTRAINTS'
+  );
+  const schemaRows = queryResult.rows.filter(
+    (r) => r.__result__type === 'INFORMATION_SCHEMA'
+  );
 
   for (const row of schemaRows) {
     // queryResult row casing may not always be consistent with what is specified in query
@@ -90,9 +98,9 @@ function formatSchemaQueryResults(queryResult) {
         tables: [],
         // temporary index to make it efficient to add tables
         tablesById: {},
-        indexes: indexRows,
-        relations: referentialConstraintRows,
-        constraints: constraintRows
+        indexes: indexRows.filter((ir) => ir.table_schema === schemaId),
+        relations: referentialConstraintRows.filter((rc) => rc.constraint_schema === schemaId),
+        constraints: constraintRows.filter((cr) => cr.constraint_schema === schemaId),
       };
     }
 

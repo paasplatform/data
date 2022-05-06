@@ -5,13 +5,13 @@ const DATABASE_SQL = `
   DECLARE @AllTables table (db_name varchar(255), db_size int, remarks text) 
   INSERT @AllTables 
   EXEC sp_databases
-  SELECT a.db_size as size, d.name ,d.database_id,d.create_date  as id FROM @AllTables a  INNER JOIN sys.databases d ON a.db_name = d.name 
+  SELECT a.db_size as size, d.name ,d.database_id, d.create_date as id FROM @AllTables a  INNER JOIN sys.databases d ON a.db_name = d.name 
   WHERE db_name NOT IN ('master', 'model', 'tempdb', 'msdb')
 `;
 
 const INFORMATION_SCHEMA_SQL = `
   SELECT 
-    'INFORMATION_SCHEMA' as __RESULT__TYPE,
+    'INFORMATION_SCHEMA' as __result__type,
     t.table_schema, 
     t.table_name, 
     c.column_name, 
@@ -29,14 +29,15 @@ const INFORMATION_SCHEMA_SQL = `
 
 const INFORMATION_CONSTRAINTS_SQL = `
   SELECT 
-    'INFORMATION_CONSTRAINTS' as __RESULT__TYPE,
-    tc.CONSTRAINT_CATALOG,
-    tc.CONSTRAINT_SCHEMA,
-    tc.CONSTRAINT_NAME,
-    tc.CONSTRAINT_TYPE, 
-    tc.IS_DEFERRABLE,
-    tc.INITIALLY_DEFERRED,
-    ccu.COLUMN_NAME 
+    'INFORMATION_CONSTRAINTS' as __result__type,
+    tc.constraint_catalog,
+    tc.constraint_schema,
+    tc.TABLE_NAME  as constraint_table,
+    tc.constraint_name,
+    tc.constraint_type, 
+    tc.is_deferrable,
+    tc.initially_deferred,
+    ccu.column_name 
   FROM INFORMATION_SCHEMA.TABLES t
   INNER JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc 
 	  ON t.TABLE_NAME = tc.TABLE_NAME AND t.TABLE_SCHEMA = tc.CONSTRAINT_SCHEMA 
@@ -45,20 +46,20 @@ const INFORMATION_CONSTRAINTS_SQL = `
 `;
 
 const INFORMATION_REFERENTIAL_CONSTRAINTS_SQL = `
-  SELECT 'INFORMATION_REFERENTIAL_CONSTRAINTS' as __RESULT__TYPE, * FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+  SELECT 'INFORMATION_REFERENTIAL_CONSTRAINTS' as __result__type, * FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
 `;
 
 const INFORMATION_INDEXES_SQL = `
   SELECT
-    'INFORMATION_INDEXES' as __RESULT__TYPE,
-    a.name AS indexName,
-    a.type_desc  As indexType,
-    OBJECT_SCHEMA_NAME(a.object_id) As schamaName,
-    OBJECT_NAME(a.object_id) As tableName,
-    COL_NAME(b.object_id,b.column_id) AS columnName,
-    a.is_primary_key as isPrimaryKey,
-    a.is_unique as isUnique,
-    a.is_unique_constraint as isUniqueConstraint,
+    'INFORMATION_INDEXES' as __result__type,
+    a.name AS index_name,
+    a.type_desc  As index_type,
+    OBJECT_SCHEMA_NAME(a.object_id) As table_schema,
+    OBJECT_NAME(a.object_id) As table_name,
+    COL_NAME(b.object_id,b.column_id) AS column_name,
+    a.is_primary_key as is_primary_key,
+    a.is_unique as is_unique,
+    a.is_unique_constraint as is_unique_constraint,
     b.index_column_id,
     b.key_ordinal,
     b.is_included_column
@@ -79,7 +80,7 @@ const INFORMATION_INDEXES_SQL = `
  * Get schema for connection
  * @param {*} connection
  */
-function getABC(connection) {
+function getDbInformation(connection) {
   return runQuery(
     `${INFORMATION_SCHEMA_SQL}${INFORMATION_CONSTRAINTS_SQL}${INFORMATION_REFERENTIAL_CONSTRAINTS_SQL}${INFORMATION_INDEXES_SQL}`,
     connection
@@ -99,6 +100,6 @@ function getDatabase(connection) {
 }
 
 module.exports = {
-  getABC,
+  getDbInformation,
   getDatabase,
 };

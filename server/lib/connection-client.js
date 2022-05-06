@@ -456,7 +456,7 @@ class ConnectionClient {
    * Gets schemas, indexes and contraints for connection
    * @returns {Promise}
    */
-   getABC(config = {}) {
+   getDbInformation(config = {}) {
     // Increase the max rows without modifiying original connection
     const connectionMaxed = {
       ...this.connection,
@@ -465,7 +465,7 @@ class ConnectionClient {
       maxRows: 1000000,
       ...config
     };
-    return this.driver.getABC(connectionMaxed);
+    return this.driver.getDbInformation(connectionMaxed);
   }
 
   /**

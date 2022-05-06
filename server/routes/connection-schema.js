@@ -61,7 +61,7 @@ async function getConnectionDatabases(req, res) {
     const actions = [];
     const result = database.rows;
     database.rows.forEach((item) => {
-      actions.push(connectionClient.getABC({ database: item.name }));
+      actions.push(connectionClient.getDbInformation({ database: item.name }));
     });
     const taskResults = await Promise.all(actions);
     taskResults.forEach((taskResult, index) => {
