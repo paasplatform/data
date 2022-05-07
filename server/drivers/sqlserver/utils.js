@@ -1,3 +1,5 @@
+const _ = require('lodash');
+
 /**
  * Formats flat schema query results into a hierarchy
  *
@@ -98,7 +100,7 @@ function formatSchemaQueryResults(queryResult) {
         tables: [],
         // temporary index to make it efficient to add tables
         tablesById: {},
-        indexes: indexRows.filter((ir) => ir.table_schema === schemaId),
+        indexes: indexRows.filter((ir) => ir.table_schema === schemaId).map(ir=>_.mapKeys(ir, (v, k) => _.camelCase(k))),
         relations: referentialConstraintRows.filter((rc) => rc.constraint_schema === schemaId),
         constraints: constraintRows.filter((cr) => cr.constraint_schema === schemaId),
       };
