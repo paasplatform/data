@@ -60,9 +60,9 @@ function formatSchemaQueryResults(queryResult) {
   const constraintRows = queryResult.rows.filter(
     (r) => r.__result__type === 'INFORMATION_CONSTRAINTS'
   );
-  const referentialConstraintRows = queryResult.rows.filter(
+  /* const referentialConstraintRows = queryResult.rows.filter(
     (r) => r.__result__type === 'INFORMATION_REFERENTIAL_CONSTRAINTS'
-  );
+  ); */
   const schemaRows = queryResult.rows.filter(
     (r) => r.__result__type === 'INFORMATION_SCHEMA'
   );
@@ -100,9 +100,13 @@ function formatSchemaQueryResults(queryResult) {
         tables: [],
         // temporary index to make it efficient to add tables
         tablesById: {},
-        indexes: indexRows.filter((ir) => ir.table_schema === schemaId).map(ir=>_.mapKeys(ir, (v, k) => _.camelCase(k))),
-        relations: referentialConstraintRows.filter((rc) => rc.constraint_schema === schemaId),
-        constraints: constraintRows.filter((cr) => cr.constraint_schema === schemaId),
+        indexes: indexRows
+          .filter((ir) => ir.table_schema === schemaId)
+          .map((ir) => _.mapKeys(ir, (v, k) => _.camelCase(k))),
+        // relations: referentialConstraintRows.filter((rc) => rc.constraint_schema === schemaId),
+        constraints: constraintRows.filter(
+          (cr) => cr.table_schema === schemaId
+        ),
       };
     }
 
@@ -112,6 +116,11 @@ function formatSchemaQueryResults(queryResult) {
         name: tableName,
         description: tableDescription,
         columns: [],
+        indexes: indexRows
+          .filter(
+            (ir) => ir.table_schema === schemaId && ir.table_name === tableName
+          )
+          .map((ir) => _.mapKeys(ir, (v, k) => _.camelCase(k))),
       };
       tablesById[tableId] = table;
 
@@ -128,6 +137,11 @@ function formatSchemaQueryResults(queryResult) {
       name: columnName,
       description: columnDescription,
       dataType,
+      ordinalPosition: cleanRow.ordinal_position,
+      characterMaximumLength: cleanRow.character_maximum_length,
+      numericPrecision: cleanRow.numeric_precision,
+      numericScale: cleanRow.numeric_scale,
+      isNullable: cleanRow.is_nullable,
     };
 
     tablesById[tableId].columns.push(column);

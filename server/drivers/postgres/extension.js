@@ -8,14 +8,24 @@ const DATABASE_SQL = `
   order by pg_database.datname;
 `;
 
-// same as MSSql
+/**
+ * INFORMATION_SCHEMA
+ * Same as MSSQL except data_type table_description and column_description,
+ */
 const INFORMATION_SCHEMA_SQL = `
   SELECT 
     'INFORMATION_SCHEMA' as __result__type,
     t.table_schema, 
     t.table_name, 
+    obj_description(format('%s.%s',c.table_schema,c.table_name)::regclass::oid, 'pg_class') as table_description,
     c.column_name, 
-    c.data_type
+    pg_catalog.col_description(format('%s.%s',c.table_schema,c.table_name)::regclass::oid,c.ordinal_position) as column_description,
+    c.udt_name as data_type,
+    c.ordinal_position,
+    c.character_maximum_length,
+    c.numeric_precision,
+    c.numeric_scale,
+    c.is_nullable
   FROM 
   INFORMATION_SCHEMA.TABLES t 
     JOIN INFORMATION_SCHEMA.COLUMNS c ON t.table_schema = c.table_schema AND t.table_name = c.table_name 
@@ -29,27 +39,49 @@ const INFORMATION_SCHEMA_SQL = `
 
 // same as MSSql
 const INFORMATION_CONSTRAINTS_SQL = `
-  SELECT 
+  SELECT
     'INFORMATION_CONSTRAINTS' as __result__type,
-    tc.constraint_catalog,
-    tc.constraint_schema,
-    tc.constraint_name,
-    tc.constraint_type, 
-    tc.is_deferrable,
-    tc.initially_deferred,
-    ccu.column_name 
-  FROM INFORMATION_SCHEMA.TABLES t
-  INNER JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc 
-	  ON t.TABLE_NAME = tc.TABLE_NAME AND t.TABLE_SCHEMA = tc.CONSTRAINT_SCHEMA 
-  INNER JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu 
-	  ON ccu.TABLE_NAME = t.TABLE_NAME AND t.TABLE_SCHEMA = ccu.CONSTRAINT_SCHEMA  AND ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-    WHERE tc.constraint_schema NOT LIKE 'pg_%';
+    tc.table_schema, 
+    tc.constraint_name, 
+    tc.table_name, 
+    tc.constraint_type,
+    kcu.column_name, 
+    ccu.table_schema AS foreign_table_schema,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
+  FROM 
+    information_schema.table_constraints AS tc 
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+      AND tc.table_schema = kcu.table_schema
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+      AND ccu.table_schema = tc.table_schema
+  WHERE  tc.constraint_schema NOT LIKE 'pg_%';
 `;
 
 // same as MSSql
-const INFORMATION_REFERENTIAL_CONSTRAINTS_SQL = `
-  SELECT 'INFORMATION_REFERENTIAL_CONSTRAINTS' as __result__type, * FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS;
-`;
+/* const INFORMATION_REFERENTIAL_CONSTRAINTS_SQL = `
+  SELECT
+    'INFORMATION_REFERENTIAL_CONSTRAINTS' as __result__type,
+    tc.table_schema, 
+    tc.constraint_name, 
+    tc.table_name, 
+    tc.constraint_type,
+    kcu.column_name, 
+    ccu.table_schema AS foreign_table_schema,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
+  FROM 
+      information_schema.table_constraints AS tc 
+      JOIN information_schema.key_column_usage AS kcu
+        ON tc.constraint_name = kcu.constraint_name
+        AND tc.table_schema = kcu.table_schema
+      JOIN information_schema.constraint_column_usage AS ccu
+        ON ccu.constraint_name = tc.constraint_name
+        AND ccu.table_schema = tc.table_schema
+  WHERE   tc.table_schema ='auth_service';
+`; */
 
 const INFORMATION_INDEXES_SQL = `
   select
@@ -85,14 +117,19 @@ const INFORMATION_INDEXES_SQL = `
 function getDbInformation(connection) {
   const schema = runQuery(`${INFORMATION_SCHEMA_SQL}`, connection);
   const constraint = runQuery(`${INFORMATION_CONSTRAINTS_SQL}`, connection);
-  const referential = runQuery(`${INFORMATION_REFERENTIAL_CONSTRAINTS_SQL}`, connection);
+  // const referential = runQuery(`${INFORMATION_REFERENTIAL_CONSTRAINTS_SQL}`, connection);
   const indexes = runQuery(`${INFORMATION_INDEXES_SQL}`, connection);
-  
-  return Promise.all([schema, constraint, referential, indexes]).then((results) => {
-    return formatSchemaQueryResults(results.reduce((sum, current)=> {
-      Object.assign(sum, {rows:sum.rows.concat(current.rows)}) 
-      return sum;
-    },{rows:[]}));
+
+  return Promise.all([schema, constraint, indexes]).then((results) => {
+    return formatSchemaQueryResults(
+      results.reduce(
+        (sum, current) => {
+          Object.assign(sum, { rows: sum.rows.concat(current.rows) });
+          return sum;
+        },
+        { rows: [] }
+      )
+    );
   });
 }
 

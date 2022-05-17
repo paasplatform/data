@@ -15,7 +15,12 @@ const INFORMATION_SCHEMA_SQL = `
     t.table_schema, 
     t.table_name, 
     c.column_name, 
-    c.data_type
+    c.data_type,
+    c.ordinal_position,
+    c.character_maximum_length,
+    c.numeric_precision,
+    c.numeric_scale,
+    c.is_nullable
   FROM 
     INFORMATION_SCHEMA.TABLES t 
     JOIN INFORMATION_SCHEMA.COLUMNS c ON t.table_schema = c.table_schema AND t.table_name = c.table_name 
@@ -27,7 +32,7 @@ const INFORMATION_SCHEMA_SQL = `
     c.ordinal_position
 `;
 
-const INFORMATION_CONSTRAINTS_SQL = `
+/* const INFORMATION_CONSTRAINTS_SQL = `
   SELECT 
     'INFORMATION_CONSTRAINTS' as __result__type,
     tc.constraint_catalog,
@@ -43,11 +48,32 @@ const INFORMATION_CONSTRAINTS_SQL = `
 	  ON t.TABLE_NAME = tc.TABLE_NAME AND t.TABLE_SCHEMA = tc.CONSTRAINT_SCHEMA 
   INNER JOIN INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE ccu 
 	  ON ccu.TABLE_NAME = t.TABLE_NAME AND t.TABLE_SCHEMA = ccu.CONSTRAINT_SCHEMA  AND ccu.CONSTRAINT_NAME = tc.CONSTRAINT_NAME 
+`; */
+
+const INFORMATION_CONSTRAINTS_SQL = `
+  SELECT
+    'INFORMATION_CONSTRAINTS' as __result__type,
+    tc.table_schema, 
+    tc.constraint_name, 
+    tc.table_name, 
+    tc.constraint_type,
+    kcu.column_name, 
+    ccu.table_schema AS foreign_table_schema,
+    ccu.table_name AS foreign_table_name,
+    ccu.column_name AS foreign_column_name 
+  FROM 
+    information_schema.table_constraints AS tc 
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+      AND tc.table_schema = kcu.table_schema
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+      AND ccu.table_schema = tc.table_schema
 `;
 
-const INFORMATION_REFERENTIAL_CONSTRAINTS_SQL = `
+/* const INFORMATION_REFERENTIAL_CONSTRAINTS_SQL = `
   SELECT 'INFORMATION_REFERENTIAL_CONSTRAINTS' as __result__type, * FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
-`;
+`; */
 
 const INFORMATION_INDEXES_SQL = `
   SELECT
@@ -82,7 +108,7 @@ const INFORMATION_INDEXES_SQL = `
  */
 function getDbInformation(connection) {
   return runQuery(
-    `${INFORMATION_SCHEMA_SQL}${INFORMATION_CONSTRAINTS_SQL}${INFORMATION_REFERENTIAL_CONSTRAINTS_SQL}${INFORMATION_INDEXES_SQL}`,
+    `${INFORMATION_SCHEMA_SQL}${INFORMATION_CONSTRAINTS_SQL}${INFORMATION_INDEXES_SQL}`,
     connection
   ).then((queryResult) => {
     return formatSchemaQueryResults(queryResult);
