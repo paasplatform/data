@@ -121,6 +121,11 @@ function formatSchemaQueryResults(queryResult) {
             (ir) => ir.table_schema === schemaId && ir.table_name === tableName
           )
           .map((ir) => _.mapKeys(ir, (v, k) => _.camelCase(k))),
+        constraints: constraintRows
+          .filter(
+            (cr) => cr.table_schema === schemaId && cr.table_name === tableName
+          )
+          .map((ir) => _.mapKeys(ir, (v, k) => _.camelCase(k))),
       };
       tablesById[tableId] = table;
 
