@@ -104,9 +104,9 @@ function formatSchemaQueryResults(queryResult) {
           .filter((ir) => ir.table_schema === schemaId)
           .map((ir) => _.mapKeys(ir, (v, k) => _.camelCase(k))),
         // relations: referentialConstraintRows.filter((rc) => rc.constraint_schema === schemaId),
-        constraints: constraintRows.filter(
-          (cr) => cr.table_schema === schemaId
-        ),
+        constraints: constraintRows
+          .filter((cr) => cr.table_schema === schemaId)
+          .map((cr) => _.mapKeys(cr, (v, k) => _.camelCase(k))),
       };
     }
 
@@ -125,7 +125,7 @@ function formatSchemaQueryResults(queryResult) {
           .filter(
             (cr) => cr.table_schema === schemaId && cr.table_name === tableName
           )
-          .map((ir) => _.mapKeys(ir, (v, k) => _.camelCase(k))),
+          .map((cr) => _.mapKeys(cr, (v, k) => _.camelCase(k))),
       };
       tablesById[tableId] = table;
 
